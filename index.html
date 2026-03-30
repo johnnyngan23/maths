@@ -303,7 +303,7 @@
 
 <script>
     // ⚠️ 老師請注意：請將下方替換為您 Google Apps Script 發布後的 Web App 網址 
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzb0PwXxtTnyJIUqO_rgeWeYDOZn4-TrXGh8MnqqN7jR1aW39q1gp2f_1uRal4XN10SoA/exec";
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxq2c6nAJTHFeTfwvm_1qAXX9JTMY_iDwkxeLky6BtcZyNXP0dso39lprhv3TqoxCN6fw/exec";
 
     // --- 資料定義 ---
     const NOTES = [
@@ -564,7 +564,7 @@
 
     // ⭐ 傳輸資料到 Google Sheet (使用 GET 方法，最不易被阻擋)
     function sendDataToGoogleSheet() {
-        if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbzb0PwXxtTnyJIUqO_rgeWeYDOZn4-TrXGh8MnqqN7jR1aW39q1gp2f_1uRal4XN10SoA/exec") {
+        if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbxq2c6nAJTHFeTfwvm_1qAXX9JTMY_iDwkxeLky6BtcZyNXP0dso39lprhv3TqoxCN6fw/exec") {
             console.log("未設定 Google Apps Script URL，跳過上傳。");
             return;
         }
