@@ -1,524 +1,673 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Wallet, Coins, Clock, Heart, Award, ChevronRight, UserCircle, AlertCircle, RefreshCcw } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>香港貨幣小遊戲</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* 隱藏元素的輔助 class */
+        .hidden-screen {
+            display: none !important;
+        }
+        /* 移除 input number 的上下箭頭 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-800">
 
-// --- 貨幣資料庫 ---
-const NOTES = [
-  { id: 'n1000', value: 1000, type: 'note', label: '$1000', color: 'bg-orange-300 border-orange-500 text-orange-900' },
-  { id: 'n500', value: 500, type: 'note', label: '$500', color: 'bg-amber-700 border-amber-900 text-amber-100' },
-  { id: 'n100', value: 100, type: 'note', label: '$100', color: 'bg-red-500 border-red-700 text-white' },
-  { id: 'n50', value: 50, type: 'note', label: '$50', color: 'bg-emerald-500 border-emerald-700 text-white' },
-  { id: 'n20', value: 20, type: 'note', label: '$20', color: 'bg-blue-400 border-blue-600 text-white' },
-  { id: 'n10', value: 10, type: 'note', label: '$10', color: 'bg-purple-500 border-purple-700 text-white' },
-];
-
-const COINS = [
-  { id: 'c10', value: 10, type: 'coin', label: '$10', color: 'bg-gray-100 border-yellow-500 border-4 text-gray-800' },
-  { id: 'c5', value: 5, type: 'coin', label: '$5', color: 'bg-gray-300 border-gray-500 border-2 text-gray-800' },
-  { id: 'c2', value: 2, type: 'coin', label: '$2', color: 'bg-gray-300 border-gray-500 border-2 text-gray-800' },
-  { id: 'c1', value: 1, type: 'coin', label: '$1', color: 'bg-gray-300 border-gray-500 border-2 text-gray-800' },
-  { id: 'c05', value: 0.5, type: 'coin', label: '5角', color: 'bg-yellow-500 border-yellow-700 border-2 text-yellow-900' },
-  { id: 'c02', value: 0.2, type: 'coin', label: '2角', color: 'bg-yellow-500 border-yellow-700 border-2 text-yellow-900' },
-  { id: 'c01', value: 0.1, type: 'coin', label: '1角', color: 'bg-yellow-500 border-yellow-700 border-2 text-yellow-900' },
-];
-
-export default function App() {
-  const [gameState, setGameState] = useState('login'); // login, menu, playing, gameover, certificate
-  const [studentId, setStudentId] = useState('');
-  const [level, setLevel] = useState(1);
-  const [currentQ, setCurrentQ] = useState(1);
-  const [score, setScore] = useState(0);
-  const [lives, setLives] = useState(3);
-  const [timeLeft, setTimeLeft] = useState(30);
-  
-  // 記錄錯誤題號
-  const [wrongQs, setWrongQs] = useState([]);
-
-  // 遊戲畫面狀態
-  const [walletMoney, setWalletMoney] = useState([]);
-  const [deskMoney, setDeskMoney] = useState([]);
-  const [inputDollar, setInputDollar] = useState('');
-  const [inputCent, setInputCent] = useState('');
-  const [feedback, setFeedback] = useState(null); // { type: 'success' | 'error', msg: string }
-  const [isSubmittingToSheet, setIsSubmittingToSheet] = useState(false);
-
-  // 產生題目
-  const generateQuestion = useCallback((gameLevel) => {
-    let moneyPool = [];
-    const maxItems = 7;
-    
-    // 根據不同難度選擇貨幣
-    if (gameLevel === 1) {
-      // 只有紙幣
-      const count = Math.floor(Math.random() * 4) + 3; // 3-6 張
-      for(let i=0; i<count; i++) {
-        const randomNote = NOTES[Math.floor(Math.random() * NOTES.length)];
-        moneyPool.push({ ...randomNote, uid: `uid_${Date.now()}_${i}` });
-      }
-    } else if (gameLevel === 2) {
-      // 只有硬幣
-      const count = Math.floor(Math.random() * 5) + 4; // 4-8 個
-      for(let i=0; i<count; i++) {
-        const randomCoin = COINS[Math.floor(Math.random() * COINS.length)];
-        moneyPool.push({ ...randomCoin, uid: `uid_${Date.now()}_${i}` });
-      }
-    } else {
-      // 混合
-      const noteCount = Math.floor(Math.random() * 3) + 2; // 2-4 張
-      const coinCount = Math.floor(Math.random() * 4) + 3; // 3-6 個
-      for(let i=0; i<noteCount; i++) {
-        const randomNote = NOTES[Math.floor(Math.random() * NOTES.length)];
-        moneyPool.push({ ...randomNote, uid: `uid_n_${Date.now()}_${i}` });
-      }
-      for(let i=0; i<coinCount; i++) {
-        const randomCoin = COINS[Math.floor(Math.random() * COINS.length)];
-        moneyPool.push({ ...randomCoin, uid: `uid_c_${Date.now()}_${i}` });
-      }
-    }
-
-    // 打亂順序
-    moneyPool.sort(() => Math.random() - 0.5);
-    
-    setWalletMoney(moneyPool);
-    setDeskMoney([]);
-    setInputDollar('');
-    setInputCent('');
-    setTimeLeft(30);
-    setFeedback(null);
-  }, []);
-
-  // 計時器
-  useEffect(() => {
-    let timer;
-    if (gameState === 'playing' && timeLeft > 0 && !feedback) {
-      timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-    } else if (timeLeft === 0 && gameState === 'playing' && !feedback) {
-      handleTimeOut();
-    }
-    return () => clearInterval(timer);
-  }, [timeLeft, gameState, feedback]);
-
-  const handleTimeOut = () => {
-    handleWrongAnswer("時間到！");
-  };
-
-  const startGame = (selectedLevel) => {
-    setLevel(selectedLevel);
-    setGameState('playing');
-    setCurrentQ(1);
-    setScore(0);
-    setLives(3);
-    setWrongQs([]);
-    generateQuestion(selectedLevel);
-  };
-
-  // 貨幣互動 (從銀包取出 / 放回銀包)
-  const moveMoney = (item, from, to) => {
-    if (from === 'wallet') {
-      setWalletMoney(prev => prev.filter(m => m.uid !== item.uid));
-      setDeskMoney(prev => [...prev, item]);
-    } else {
-      setDeskMoney(prev => prev.filter(m => m.uid !== item.uid));
-      setWalletMoney(prev => [...prev, item]);
-    }
-  };
-
-  const handleWrongAnswer = (customMsg = "答錯了！請再試一次。") => {
-    const newLives = lives - 1;
-    setLives(newLives);
-    
-    // 記錄錯題
-    if (!wrongQs.includes(currentQ)) {
-      setWrongQs(prev => [...prev, currentQ]);
-    }
-
-    if (newLives <= 0) {
-      setFeedback({ type: 'error', msg: '沒有機會了！遊戲結束。' });
-      setTimeout(() => endGame(), 2000);
-    } else {
-      setFeedback({ type: 'error', msg: customMsg });
-      setTimeout(() => {
-        setFeedback(null);
-        // 如果想答錯直接跳下一題，可在此呼叫 nextQuestion()
-        // 但目前設定為扣血並給予機會重新輸入，除非時間到
-      }, 2000);
-    }
-  };
-
-  const checkAnswer = () => {
-    if (feedback) return; // 避免重複點擊
-    
-    // 計算總金額 (以「角」為單位計算避免浮點數誤差)
-    const allMoney = [...walletMoney, ...deskMoney];
-    let totalCents = 0;
-    allMoney.forEach(m => {
-      totalCents += Math.round(m.value * 10);
-    });
-
-    const userDollars = parseInt(inputDollar) || 0;
-    const userCents = parseInt(inputCent) || 0;
-    const userTotalCents = (userDollars * 10) + userCents;
-
-    if (userTotalCents === totalCents) {
-      // 答對了
-      setScore(prev => prev + 1);
-      setFeedback({ type: 'success', msg: '答對了！好棒！' });
-      setTimeout(() => nextQuestion(), 1500);
-    } else {
-      handleWrongAnswer();
-    }
-  };
-
-  const nextQuestion = () => {
-    if (currentQ >= 5) {
-      endGame();
-    } else {
-      setCurrentQ(prev => prev + 1);
-      generateQuestion(level);
-    }
-  };
-
-  const endGame = async () => {
-    setGameState('certificate');
-    await submitToGoogleSheet();
-  };
-
-  // --- Google Sheet 整合邏輯 ---
-  const submitToGoogleSheet = async () => {
-    setIsSubmittingToSheet(true);
-    
-    // 準備傳送的資料
-    const payload = {
-      studentId: studentId,
-      score: score,
-      level: level,
-      wrongQuestions: wrongQs.join(', ') || '無'
-    };
-
-    try {
-      /* 【教師設定指南】
-        1. 在 Google Drive 新增一個 Google Apps Script。
-        2. 貼上以下程式碼：
-           function doPost(e) {
-             var sheet = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/15ONtSFINqffiSulah8kJeZ3Cktxaeaqrq-yxrMlgs-Y/edit?usp=sharing").getActiveSheet();
-             var data = JSON.parse(e.postData.contents);
-             sheet.appendRow([new Date(), data.studentId, data.level, data.score, data.wrongQuestions]);
-             return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
-           }
-        3. 點擊「部署」->「新增部署作業」-> 選「網頁應用程式」，將存取權限設為「所有人」。
-        4. 複製產生的網頁應用程式 URL，取代下方的 WEB_APP_URL。
-      */
-      
-      const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyPPZ_fEnfc55vmQX230CqV_ie8QAphxQv94hQCcclUD2q90dYLQSeL1WMIPoG-4b0o/exec"; 
-      
-      // 由於這是一個示範，如果沒有真實的 URL，我們會模擬一個成功的請求
-      if (WEB_APP_URL !== "https://script.google.com/macros/s/AKfycbyPPZ_fEnfc55vmQX230CqV_ie8QAphxQv94hQCcclUD2q90dYLQSeL1WMIPoG-4b0o/exec") {
-         await fetch(WEB_APP_URL, {
-            method: 'POST',
-            mode: 'no-cors', // 避免跨域問題
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-         });
-      } else {
-        // 模擬網路延遲
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        console.log("模擬成功傳送資料至 Google Sheet:", payload);
-      }
-    } catch (error) {
-      console.error("傳送資料失敗:", error);
-    } finally {
-      setIsSubmittingToSheet(false);
-    }
-  };
-
-  // 畫面渲染函數
-  const renderMoneyItem = (m, container) => (
-    <div 
-      key={m.uid} 
-      onClick={() => moveMoney(m, container, container === 'wallet' ? 'desk' : 'wallet')}
-      className={`cursor-pointer transform hover:scale-105 transition-transform shadow-md flex items-center justify-center font-bold ${m.color} ${m.type === 'note' ? 'w-24 h-12 rounded' : 'w-12 h-12 rounded-full'}`}
-    >
-      {m.label}
-    </div>
-  );
-
-  // --- 畫面元件 ---
-  if (gameState === 'login') {
-    return (
-      <div className="min-h-screen bg-blue-50 flex flex-col items-center justify-center p-4 font-sans">
-        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
-          <div className="flex justify-center mb-6">
-            <Coins size={64} className="text-yellow-500" />
-          </div>
-          <h1 className="text-3xl font-bold text-blue-800 mb-6">小學二年級<br/>趣味貨幣遊戲</h1>
-          <div className="mb-6 text-left">
-            <label className="block text-gray-700 font-bold mb-2 flex items-center">
-              <UserCircle className="mr-2" size={20} /> 請輸入學號：
-            </label>
-            <input 
-              type="text" 
-              value={studentId}
-              onChange={(e) => setStudentId(e.target.value)}
-              placeholder="例如：2A01"
-              className="w-full px-4 py-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:border-blue-500 text-xl text-center"
-            />
-          </div>
-          <button 
-            disabled={!studentId.trim()}
-            onClick={() => setGameState('menu')}
-            className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white font-bold py-3 px-6 rounded-xl text-xl transition-colors shadow-lg flex items-center justify-center"
-          >
-            準備開始 <ChevronRight className="ml-2" />
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (gameState === 'menu') {
-    return (
-      <div className="min-h-screen bg-green-50 flex flex-col items-center justify-center p-4 font-sans">
-        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg text-center">
-          <h2 className="text-3xl font-bold text-green-800 mb-2">歡迎，{studentId}！</h2>
-          <p className="text-gray-600 mb-8">請選擇你想挑戰的難度：</p>
-          
-          <div className="space-y-4">
-            <button onClick={() => startGame(1)} className="w-full group relative overflow-hidden bg-white border-4 border-blue-400 hover:border-blue-500 rounded-2xl p-4 transition-all">
-              <div className="absolute inset-0 bg-blue-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="relative z-10 flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="bg-blue-500 text-white p-3 rounded-full mr-4"><Wallet size={24} /></div>
-                  <div className="text-left">
-                    <h3 className="text-xl font-bold text-blue-800">第一關：只有紙幣</h3>
-                    <p className="text-sm text-gray-500">學習計算大額貨幣</p>
-                  </div>
-                </div>
-                <ChevronRight className="text-blue-500" />
-              </div>
-            </button>
-
-            <button onClick={() => startGame(2)} className="w-full group relative overflow-hidden bg-white border-4 border-yellow-400 hover:border-yellow-500 rounded-2xl p-4 transition-all">
-              <div className="absolute inset-0 bg-yellow-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="relative z-10 flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="bg-yellow-500 text-white p-3 rounded-full mr-4"><Coins size={24} /></div>
-                  <div className="text-left">
-                    <h3 className="text-xl font-bold text-yellow-800">第二關：只有硬幣</h3>
-                    <p className="text-sm text-gray-500">學習計算元和角</p>
-                  </div>
-                </div>
-                <ChevronRight className="text-yellow-500" />
-              </div>
-            </button>
-
-            <button onClick={() => startGame(3)} className="w-full group relative overflow-hidden bg-white border-4 border-purple-400 hover:border-purple-500 rounded-2xl p-4 transition-all">
-              <div className="absolute inset-0 bg-purple-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="relative z-10 flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="bg-purple-500 text-white p-3 rounded-full mr-4">
-                    <div className="flex -space-x-2"><Wallet size={20}/><Coins size={20}/></div>
-                  </div>
-                  <div className="text-left">
-                    <h3 className="text-xl font-bold text-purple-800">第三關：紙幣與硬幣</h3>
-                    <p className="text-sm text-gray-500">終極挑戰！混合計算</p>
-                  </div>
-                </div>
-                <ChevronRight className="text-purple-500" />
-              </div>
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (gameState === 'playing') {
-    return (
-      <div className="min-h-screen bg-indigo-50 p-4 font-sans flex flex-col max-w-3xl mx-auto">
-        {/* 頭部資訊欄 */}
-        <div className="bg-white rounded-2xl shadow-md p-4 mb-4 flex justify-between items-center">
-          <div className="flex items-center space-x-2 text-indigo-800 font-bold text-lg">
-            <span>學號：{studentId}</span>
-            <span className="px-2">|</span>
-            <span>第 {currentQ} / 5 題</span>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex text-red-500">
-              {[...Array(3)].map((_, i) => (
-                <Heart key={i} size={28} className={i < lives ? "fill-current" : "text-gray-300"} />
-              ))}
+    <!-- 登入畫面 -->
+    <div id="screen-login" class="min-h-screen bg-blue-50 flex flex-col items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
+            <div class="flex justify-center mb-6 text-yellow-500">
+                <i data-lucide="coins" style="width: 64px; height: 64px;"></i>
             </div>
-            <div className={`flex items-center font-bold text-2xl ${timeLeft <= 10 ? 'text-red-500 animate-pulse' : 'text-indigo-800'}`}>
-              <Clock className="mr-2" /> {timeLeft}s
+            <h1 class="text-3xl font-bold text-blue-800 mb-6">小學二年級<br/>趣味貨幣遊戲</h1>
+            <div class="mb-6 text-left">
+                <label class="block text-gray-700 font-bold mb-2 flex items-center">
+                    <i data-lucide="user-circle" class="mr-2" style="width: 20px; height: 20px;"></i> 請輸入學號：
+                </label>
+                <input 
+                    type="text" 
+                    id="input-student-id"
+                    placeholder="例如：2A01"
+                    class="w-full px-4 py-3 border-2 border-blue-200 rounded-lg focus:outline-none focus:border-blue-500 text-xl text-center"
+                />
             </div>
-          </div>
-        </div>
-
-        {/* 遊戲區 */}
-        <div className="flex-1 bg-white rounded-2xl shadow-md p-6 flex flex-col relative">
-          
-          <div className="text-center mb-4">
-            <h2 className="text-2xl font-bold text-gray-800">點擊銀包裡的錢，把它們拿出來數一數！</h2>
-          </div>
-
-          <div className="flex-1 flex flex-col md:flex-row gap-6 mb-6">
-            {/* 銀包區 */}
-            <div className="flex-1 bg-blue-50 border-4 border-blue-200 rounded-xl p-4 flex flex-col">
-              <div className="text-blue-800 font-bold mb-2 flex items-center"><Wallet className="mr-2"/> 銀包</div>
-              <div className="flex-1 flex flex-wrap content-start gap-3">
-                {walletMoney.map(m => renderMoneyItem(m, 'wallet'))}
-                {walletMoney.length === 0 && <div className="text-gray-400 w-full text-center mt-10">銀包空了！</div>}
-              </div>
-            </div>
-
-            {/* 桌面區 */}
-            <div className="flex-1 bg-amber-50 border-4 border-amber-200 rounded-xl p-4 flex flex-col">
-              <div className="text-amber-800 font-bold mb-2">數錢區 (點擊可放回)</div>
-              <div className="flex-1 flex flex-wrap content-start gap-3">
-                {deskMoney.map(m => renderMoneyItem(m, 'desk'))}
-              </div>
-            </div>
-          </div>
-
-          {/* 輸入區 */}
-          <div className="bg-gray-100 p-6 rounded-xl flex flex-col items-center">
-            <h3 className="text-xl font-bold text-gray-700 mb-4">這裏總共有多少錢？</h3>
-            <div className="flex items-center justify-center space-x-4 text-2xl font-bold">
-              <input 
-                type="number" 
-                value={inputDollar}
-                onChange={(e) => setInputDollar(e.target.value)}
-                className="w-24 px-2 py-2 text-center rounded-lg border-2 border-gray-300 focus:border-indigo-500 focus:outline-none"
-                placeholder="0"
-                min="0"
-              />
-              <span className="text-gray-600">元</span>
-              
-              <input 
-                type="number" 
-                value={inputCent}
-                onChange={(e) => setInputCent(e.target.value)}
-                className="w-20 px-2 py-2 text-center rounded-lg border-2 border-gray-300 focus:border-indigo-500 focus:outline-none"
-                placeholder="0"
-                min="0"
-                max="9"
-              />
-              <span className="text-gray-600">角</span>
-            </div>
-            
             <button 
-              onClick={checkAnswer}
-              disabled={!!feedback}
-              className="mt-6 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-bold py-3 px-10 rounded-full text-xl shadow-lg transform transition active:scale-95"
+                id="btn-login"
+                class="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white font-bold py-3 px-6 rounded-xl text-xl transition-colors shadow-lg flex items-center justify-center"
+                disabled
             >
-              確定答案
+                準備開始 <i data-lucide="chevron-right" class="ml-2"></i>
             </button>
-          </div>
+        </div>
+    </div>
 
-          {/* 回饋覆蓋層 */}
-          {feedback && (
-            <div className="absolute inset-0 bg-white/80 rounded-2xl flex items-center justify-center z-10 backdrop-blur-sm">
-              <div className={`p-8 rounded-2xl shadow-2xl text-center transform animate-bounce ${feedback.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                {feedback.type === 'success' ? (
-                  <Award size={80} className="mx-auto mb-4 text-green-500" />
-                ) : (
-                  <AlertCircle size={80} className="mx-auto mb-4 text-red-500" />
-                )}
-                <h2 className="text-3xl font-bold">{feedback.msg}</h2>
-              </div>
+    <!-- 主選單畫面 -->
+    <div id="screen-menu" class="min-h-screen bg-green-50 flex flex-col items-center justify-center p-4 hidden-screen">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg text-center">
+            <h2 class="text-3xl font-bold text-green-800 mb-2">歡迎，<span id="display-student-id"></span>！</h2>
+            <p class="text-gray-600 mb-8">請選擇你想挑戰的難度：</p>
+            
+            <div class="space-y-4">
+                <button onclick="startGame(1)" class="w-full group relative overflow-hidden bg-white border-4 border-blue-400 hover:border-blue-500 rounded-2xl p-4 transition-all">
+                    <div class="absolute inset-0 bg-blue-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="relative z-10 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="bg-blue-500 text-white p-3 rounded-full mr-4"><i data-lucide="wallet"></i></div>
+                            <div class="text-left">
+                                <h3 class="text-xl font-bold text-blue-800">第一關：只有紙幣</h3>
+                                <p class="text-sm text-gray-500">學習計算大額貨幣</p>
+                            </div>
+                        </div>
+                        <i data-lucide="chevron-right" class="text-blue-500"></i>
+                    </div>
+                </button>
+
+                <button onclick="startGame(2)" class="w-full group relative overflow-hidden bg-white border-4 border-yellow-400 hover:border-yellow-500 rounded-2xl p-4 transition-all">
+                    <div class="absolute inset-0 bg-yellow-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="relative z-10 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="bg-yellow-500 text-white p-3 rounded-full mr-4"><i data-lucide="coins"></i></div>
+                            <div class="text-left">
+                                <h3 class="text-xl font-bold text-yellow-800">第二關：只有硬幣</h3>
+                                <p class="text-sm text-gray-500">學習計算元和角</p>
+                            </div>
+                        </div>
+                        <i data-lucide="chevron-right" class="text-yellow-500"></i>
+                    </div>
+                </button>
+
+                <button onclick="startGame(3)" class="w-full group relative overflow-hidden bg-white border-4 border-purple-400 hover:border-purple-500 rounded-2xl p-4 transition-all">
+                    <div class="absolute inset-0 bg-purple-100 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div class="relative z-10 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="bg-purple-500 text-white p-3 rounded-full mr-4 flex -space-x-2">
+                                <i data-lucide="wallet" style="width: 20px; height: 20px;"></i>
+                                <i data-lucide="coins" style="width: 20px; height: 20px;"></i>
+                            </div>
+                            <div class="text-left">
+                                <h3 class="text-xl font-bold text-purple-800">第三關：紙幣與硬幣</h3>
+                                <p class="text-sm text-gray-500">終極挑戰！混合計算</p>
+                            </div>
+                        </div>
+                        <i data-lucide="chevron-right" class="text-purple-500"></i>
+                    </div>
+                </button>
             </div>
-          )}
-
         </div>
-      </div>
-    );
-  }
+    </div>
 
-  if (gameState === 'certificate') {
-    // 判斷證書等級
-    let certStyle = {
-      bg: "bg-orange-50",
-      border: "border-orange-400",
-      header: "bg-orange-500",
-      title: "銅獎證書",
-      iconColor: "text-orange-500",
-      msg: "繼續努力，你一定能做得更好！"
-    };
+    <!-- 遊戲畫面 -->
+    <div id="screen-playing" class="min-h-screen bg-indigo-50 p-4 hidden-screen">
+        <div class="max-w-3xl mx-auto flex flex-col h-full min-h-[calc(100vh-2rem)]">
+            <!-- 頭部資訊欄 -->
+            <div class="bg-white rounded-2xl shadow-md p-4 mb-4 flex justify-between items-center shrink-0">
+                <div class="flex items-center space-x-2 text-indigo-800 font-bold text-lg">
+                    <span>學號：<span id="playing-student-id"></span></span>
+                    <span class="px-2">|</span>
+                    <span>第 <span id="current-q"></span> / 5 題</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div id="hearts-container" class="flex text-red-500">
+                        <!-- Hearts will be generated here -->
+                    </div>
+                    <div id="timer-container" class="flex items-center font-bold text-2xl text-indigo-800 transition-colors">
+                        <i data-lucide="clock" class="mr-2"></i> <span id="time-left">30</span>s
+                    </div>
+                </div>
+            </div>
 
-    if (score === 5) {
-      certStyle = {
-        bg: "bg-yellow-50",
-        border: "border-yellow-400",
-        header: "bg-yellow-500",
-        title: "金獎證書",
-        iconColor: "text-yellow-500",
-        msg: "太棒了！你是貨幣計算大師！"
-      };
-    } else if (score >= 3) {
-      certStyle = {
-        bg: "bg-gray-100",
-        border: "border-gray-400",
-        header: "bg-gray-500",
-        title: "銀獎證書",
-        iconColor: "text-gray-500",
-        msg: "表現很好！距離滿分只差一點點！"
-      };
-    }
+            <!-- 遊戲區 -->
+            <div class="flex-1 bg-white rounded-2xl shadow-md p-6 flex flex-col relative">
+                
+                <div class="text-center mb-4 shrink-0">
+                    <h2 class="text-2xl font-bold text-gray-800">點擊銀包裡的錢，把它們拿出來數一數！</h2>
+                </div>
 
-    return (
-      <div className="min-h-screen bg-slate-100 p-4 font-sans flex flex-col items-center justify-center">
-        
-        {/* 證書本體 */}
-        <div className={`w-full max-w-2xl bg-white border-8 ${certStyle.border} rounded-xl shadow-2xl overflow-hidden relative`}>
-          <div className={`${certStyle.header} py-6 text-center text-white`}>
-            <h1 className="text-4xl font-extrabold tracking-widest">{certStyle.title}</h1>
-          </div>
-          
-          <div className={`p-10 text-center ${certStyle.bg}`}>
-            <Award size={100} className={`mx-auto mb-6 ${certStyle.iconColor}`} />
+                <div class="flex-1 flex flex-col md:flex-row gap-6 mb-6">
+                    <!-- 銀包區 -->
+                    <div class="flex-1 bg-blue-50 border-4 border-blue-200 rounded-xl p-4 flex flex-col">
+                        <div class="text-blue-800 font-bold mb-2 flex items-center">
+                            <i data-lucide="wallet" class="mr-2"></i> <span id="wallet-owner"></span>的銀包
+                        </div>
+                        <div id="wallet-items" class="flex-1 flex flex-wrap content-start gap-3">
+                            <!-- Wallet money items -->
+                        </div>
+                    </div>
+
+                    <!-- 桌面區 -->
+                    <div class="flex-1 bg-amber-50 border-4 border-amber-200 rounded-xl p-4 flex flex-col">
+                        <div class="text-amber-800 font-bold mb-2">數錢區 (點擊可放回)</div>
+                        <div id="desk-items" class="flex-1 flex flex-wrap content-start gap-3">
+                            <!-- Desk money items -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 輸入區 -->
+                <div class="bg-gray-100 p-6 rounded-xl flex flex-col items-center shrink-0">
+                    <h3 class="text-xl font-bold text-gray-700 mb-4">這裏總共有多少錢？</h3>
+                    <div class="flex items-center justify-center space-x-4 text-2xl font-bold">
+                        <input 
+                            type="number" 
+                            id="input-dollar"
+                            class="w-24 px-2 py-2 text-center rounded-lg border-2 border-gray-300 focus:border-indigo-500 focus:outline-none"
+                            placeholder="0"
+                            min="0"
+                        />
+                        <span class="text-gray-600">元</span>
+                        
+                        <input 
+                            type="number" 
+                            id="input-cent"
+                            class="w-20 px-2 py-2 text-center rounded-lg border-2 border-gray-300 focus:border-indigo-500 focus:outline-none"
+                            placeholder="0"
+                            min="0"
+                            max="9"
+                        />
+                        <span class="text-gray-600">角</span>
+                    </div>
+                    
+                    <button 
+                        id="btn-submit-answer"
+                        onclick="checkAnswer()"
+                        class="mt-6 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-10 rounded-full text-xl shadow-lg transform transition active:scale-95"
+                    >
+                        確定答案
+                    </button>
+                </div>
+
+                <!-- 回饋覆蓋層 -->
+                <div id="feedback-overlay" class="hidden absolute inset-0 bg-white/80 rounded-2xl flex items-center justify-center z-10 backdrop-blur-sm">
+                    <div id="feedback-box" class="p-8 rounded-2xl shadow-2xl text-center transform animate-bounce bg-green-100 text-green-800">
+                        <div id="feedback-icon-success" class="hidden mb-4 text-green-500 flex justify-center">
+                            <i data-lucide="award" style="width: 80px; height: 80px;"></i>
+                        </div>
+                        <div id="feedback-icon-error" class="hidden mb-4 text-red-500 flex justify-center">
+                            <i data-lucide="alert-circle" style="width: 80px; height: 80px;"></i>
+                        </div>
+                        <h2 id="feedback-msg" class="text-3xl font-bold">答對了！</h2>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- 證書畫面 -->
+    <div id="screen-certificate" class="min-h-screen bg-slate-100 p-4 flex flex-col items-center justify-center hidden-screen">
+        <!-- 證書本體 -->
+        <div id="cert-container" class="w-full max-w-2xl bg-white border-8 rounded-xl shadow-2xl overflow-hidden relative">
+            <div id="cert-header" class="py-6 text-center text-white">
+                <h1 id="cert-title" class="text-4xl font-extrabold tracking-widest">證書</h1>
+            </div>
             
-            <p className="text-xl text-gray-700 mb-2">特此頒發給</p>
-            <h2 className="text-4xl font-bold text-gray-900 border-b-2 border-gray-400 inline-block pb-2 mb-6 px-8">
-              {studentId}
-            </h2>
+            <div id="cert-body" class="p-10 text-center">
+                <div id="cert-icon" class="mb-6 flex justify-center">
+                    <i data-lucide="award" style="width: 100px; height: 100px;"></i>
+                </div>
+                
+                <p class="text-xl text-gray-700 mb-2">特此頒發給</p>
+                <h2 id="cert-student-id" class="text-4xl font-bold text-gray-900 border-b-2 border-gray-400 inline-block pb-2 mb-6 px-8"></h2>
+                
+                <p class="text-2xl text-gray-800 mb-4">
+                    在貨幣計算挑戰（第 <span id="cert-level"></span> 關）中
+                </p>
+                <p class="text-3xl font-bold text-indigo-700 mb-6">
+                    獲得了 <span id="cert-score"></span> / 5 分！
+                </p>
+                
+                <p id="cert-msg" class="text-lg font-bold text-gray-600 italic">
+                    ""
+                </p>
+            </div>
             
-            <p className="text-2xl text-gray-800 mb-4">
-              在貨幣計算挑戰（第 {level} 關）中
-            </p>
-            <p className="text-3xl font-bold text-indigo-700 mb-6">
-              獲得了 {score} / 5 分！
-            </p>
-            
-            <p className="text-lg font-bold text-gray-600 italic">
-              "{certStyle.msg}"
-            </p>
-          </div>
-          
-          {/* 裝飾 */}
-          <div className="absolute top-4 left-4 w-16 h-16 border-t-4 border-l-4 border-white/50"></div>
-          <div className="absolute top-4 right-4 w-16 h-16 border-t-4 border-r-4 border-white/50"></div>
-          <div className="absolute bottom-4 left-4 w-16 h-16 border-b-4 border-l-4 border-white/50"></div>
-          <div className="absolute bottom-4 right-4 w-16 h-16 border-b-4 border-r-4 border-white/50"></div>
+            <!-- 裝飾 -->
+            <div class="absolute top-4 left-4 w-16 h-16 border-t-4 border-l-4 border-white/50"></div>
+            <div class="absolute top-4 right-4 w-16 h-16 border-t-4 border-r-4 border-white/50"></div>
+            <div class="absolute bottom-4 left-4 w-16 h-16 border-b-4 border-l-4 border-white/50"></div>
+            <div class="absolute bottom-4 right-4 w-16 h-16 border-b-4 border-r-4 border-white/50"></div>
         </div>
 
-        {/* 系統狀態與按鈕 */}
-        <div className="mt-8 flex flex-col items-center gap-4">
-          {isSubmittingToSheet ? (
-            <p className="text-gray-500 flex items-center"><RefreshCcw className="animate-spin mr-2"/> 正在傳送成績至老師的紀錄表...</p>
-          ) : (
-            <p className="text-green-600 font-bold">✓ 成績已記錄</p>
-          )}
+        <!-- 系統狀態與按鈕 -->
+        <div class="mt-8 flex flex-col items-center gap-4">
+            <div id="sheet-status" class="text-gray-500 flex items-center font-bold text-lg">
+                <!-- Status text will be injected here -->
+            </div>
 
-          <button 
-            onClick={() => setGameState('menu')}
-            className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-8 rounded-full text-xl shadow-lg transition"
-          >
-            回主選單挑戰其他關卡
-          </button>
+            <button 
+                onclick="returnToMenu()"
+                class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-8 rounded-full text-xl shadow-lg transition mt-2"
+            >
+                回主選單挑戰其他關卡
+            </button>
         </div>
+    </div>
 
-      </div>
-    );
-  }
+    <!-- JavaScript 邏輯 -->
+    <script>
+        // --- 貨幣資料庫 ---
+        const NOTES = [
+            { id: 'n1000', value: 1000, type: 'note', label: '$1000', color: 'bg-orange-300 border-orange-500 text-orange-900' },
+            { id: 'n500', value: 500, type: 'note', label: '$500', color: 'bg-amber-700 border-amber-900 text-amber-100' },
+            { id: 'n100', value: 100, type: 'note', label: '$100', color: 'bg-red-500 border-red-700 text-white' },
+            { id: 'n50', value: 50, type: 'note', label: '$50', color: 'bg-emerald-500 border-emerald-700 text-white' },
+            { id: 'n20', value: 20, type: 'note', label: '$20', color: 'bg-blue-400 border-blue-600 text-white' },
+            { id: 'n10', value: 10, type: 'note', label: '$10', color: 'bg-purple-500 border-purple-700 text-white' },
+        ];
 
-  return null;
-}
+        const COINS = [
+            { id: 'c10', value: 10, type: 'coin', label: '$10', color: 'bg-gray-100 border-yellow-500 border-4 text-gray-800' },
+            { id: 'c5', value: 5, type: 'coin', label: '$5', color: 'bg-gray-300 border-gray-500 border-2 text-gray-800' },
+            { id: 'c2', value: 2, type: 'coin', label: '$2', color: 'bg-gray-300 border-gray-500 border-2 text-gray-800' },
+            { id: 'c1', value: 1, type: 'coin', label: '$1', color: 'bg-gray-300 border-gray-500 border-2 text-gray-800' },
+            { id: 'c05', value: 0.5, type: 'coin', label: '5角', color: 'bg-yellow-500 border-yellow-700 border-2 text-yellow-900' },
+            { id: 'c02', value: 0.2, type: 'coin', label: '2角', color: 'bg-yellow-500 border-yellow-700 border-2 text-yellow-900' },
+            { id: 'c01', value: 0.1, type: 'coin', label: '1角', color: 'bg-yellow-500 border-yellow-700 border-2 text-yellow-900' },
+        ];
+
+        const CHARACTERS = ['小明', '小華', '陳老師', '李伯伯', '王阿姨', '爸爸', '媽媽', '校長'];
+
+        // --- 遊戲狀態變數 ---
+        let studentId = '';
+        let level = 1;
+        let currentQ = 1;
+        let score = 0;
+        let lives = 3;
+        let timeLeft = 30;
+        let wrongQs = [];
+        let walletOwner = '';
+        let walletMoney = [];
+        let deskMoney = [];
+        let timerInterval = null;
+        let isFeedbackShowing = false;
+
+        // --- 初始化 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons(); // 渲染圖示
+
+            const inputId = document.getElementById('input-student-id');
+            const btnLogin = document.getElementById('btn-login');
+
+            // 監聽學號輸入
+            inputId.addEventListener('input', (e) => {
+                studentId = e.target.value.trim();
+                btnLogin.disabled = studentId.length === 0;
+                if(studentId.length > 0) {
+                    btnLogin.classList.remove('disabled:bg-gray-300');
+                }
+            });
+
+            // 登入按鈕
+            btnLogin.addEventListener('click', () => {
+                document.getElementById('display-student-id').innerText = studentId;
+                document.getElementById('playing-student-id').innerText = studentId;
+                switchScreen('screen-menu');
+            });
+        });
+
+        // 切換畫面
+        function switchScreen(screenId) {
+            const screens = ['screen-login', 'screen-menu', 'screen-playing', 'screen-certificate'];
+            screens.forEach(s => document.getElementById(s).classList.add('hidden-screen'));
+            document.getElementById(screenId).classList.remove('hidden-screen');
+            lucide.createIcons(); // 重新渲染新畫面上的圖示
+        }
+
+        // 開始遊戲
+        function startGame(selectedLevel) {
+            level = selectedLevel;
+            currentQ = 1;
+            score = 0;
+            lives = 3;
+            wrongQs = [];
+            switchScreen('screen-playing');
+            generateQuestion();
+        }
+
+        // 產生題目
+        function generateQuestion() {
+            walletMoney = [];
+            deskMoney = [];
+            
+            // 隨機選擇銀包主人
+            walletOwner = CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
+            document.getElementById('wallet-owner').innerText = walletOwner;
+            
+            // 根據不同難度選擇貨幣
+            if (level === 1) {
+                const count = Math.floor(Math.random() * 4) + 3; // 3-6 張
+                for(let i=0; i<count; i++) {
+                    const randomNote = NOTES[Math.floor(Math.random() * NOTES.length)];
+                    walletMoney.push({ ...randomNote, uid: `uid_${Date.now()}_${i}` });
+                }
+            } else if (level === 2) {
+                const count = Math.floor(Math.random() * 5) + 4; // 4-8 個
+                for(let i=0; i<count; i++) {
+                    const randomCoin = COINS[Math.floor(Math.random() * COINS.length)];
+                    walletMoney.push({ ...randomCoin, uid: `uid_${Date.now()}_${i}` });
+                }
+            } else {
+                const noteCount = Math.floor(Math.random() * 3) + 2; // 2-4 張
+                const coinCount = Math.floor(Math.random() * 4) + 3; // 3-6 個
+                for(let i=0; i<noteCount; i++) {
+                    const randomNote = NOTES[Math.floor(Math.random() * NOTES.length)];
+                    walletMoney.push({ ...randomNote, uid: `uid_n_${Date.now()}_${i}` });
+                }
+                for(let i=0; i<coinCount; i++) {
+                    const randomCoin = COINS[Math.floor(Math.random() * COINS.length)];
+                    walletMoney.push({ ...randomCoin, uid: `uid_c_${Date.now()}_${i}` });
+                }
+            }
+
+            // 打亂順序
+            walletMoney.sort(() => Math.random() - 0.5);
+            
+            // 更新 UI
+            document.getElementById('current-q').innerText = currentQ;
+            document.getElementById('input-dollar').value = '';
+            document.getElementById('input-cent').value = '';
+            
+            renderMoney();
+            renderHearts();
+            hideFeedback();
+            
+            // 重置與啟動計時器
+            timeLeft = 30;
+            updateTimerUI();
+            startTimer();
+        }
+
+        // 渲染錢幣
+        function renderMoney() {
+            const walletContainer = document.getElementById('wallet-items');
+            const deskContainer = document.getElementById('desk-items');
+            
+            walletContainer.innerHTML = '';
+            deskContainer.innerHTML = '';
+
+            if (walletMoney.length === 0) {
+                walletContainer.innerHTML = '<div class="text-gray-400 w-full text-center mt-10">銀包空了！</div>';
+            }
+
+            walletMoney.forEach(m => walletContainer.appendChild(createMoneyEl(m, 'wallet')));
+            deskMoney.forEach(m => deskContainer.appendChild(createMoneyEl(m, 'desk')));
+        }
+
+        // 創建錢幣 DOM 元素
+        function createMoneyEl(m, container) {
+            const div = document.createElement('div');
+            const shapeClass = m.type === 'note' ? 'w-24 h-12 rounded' : 'w-12 h-12 rounded-full';
+            div.className = `cursor-pointer transform hover:scale-105 transition-transform shadow-md flex items-center justify-center font-bold ${m.color} ${shapeClass}`;
+            div.innerText = m.label;
+            div.onclick = () => moveMoney(m.uid, container);
+            return div;
+        }
+
+        // 移動錢幣
+        function moveMoney(uid, from) {
+            if (isFeedbackShowing) return;
+            
+            if (from === 'wallet') {
+                const itemIndex = walletMoney.findIndex(m => m.uid === uid);
+                if (itemIndex > -1) {
+                    const item = walletMoney.splice(itemIndex, 1)[0];
+                    deskMoney.push(item);
+                }
+            } else {
+                const itemIndex = deskMoney.findIndex(m => m.uid === uid);
+                if (itemIndex > -1) {
+                    const item = deskMoney.splice(itemIndex, 1)[0];
+                    walletMoney.push(item);
+                }
+            }
+            renderMoney();
+        }
+
+        // 渲染愛心(生命值)
+        function renderHearts() {
+            const container = document.getElementById('hearts-container');
+            container.innerHTML = '';
+            for(let i=0; i<3; i++) {
+                const colorClass = i < lives ? "fill-current text-red-500" : "text-gray-300";
+                container.innerHTML += `<i data-lucide="heart" class="${colorClass}" style="width: 28px; height: 28px;"></i>`;
+            }
+            lucide.createIcons({ root: container });
+        }
+
+        // 計時器邏輯
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (timeLeft > 0 && !isFeedbackShowing) {
+                    timeLeft--;
+                    updateTimerUI();
+                } else if (timeLeft <= 0 && !isFeedbackShowing) {
+                    clearInterval(timerInterval);
+                    handleWrongAnswer("時間到！");
+                }
+            }, 1000);
+        }
+
+        function updateTimerUI() {
+            document.getElementById('time-left').innerText = timeLeft;
+            const timerContainer = document.getElementById('timer-container');
+            if (timeLeft <= 10) {
+                timerContainer.classList.add('text-red-500', 'animate-pulse');
+                timerContainer.classList.remove('text-indigo-800');
+            } else {
+                timerContainer.classList.remove('text-red-500', 'animate-pulse');
+                timerContainer.classList.add('text-indigo-800');
+            }
+        }
+
+        // 檢查答案
+        function checkAnswer() {
+            if (isFeedbackShowing) return;
+
+            // 計算總金額 (以角為單位避免浮點數誤差)
+            const allMoney = [...walletMoney, ...deskMoney];
+            let totalCents = 0;
+            allMoney.forEach(m => {
+                totalCents += Math.round(m.value * 10);
+            });
+
+            const dollarInput = document.getElementById('input-dollar').value;
+            const centInput = document.getElementById('input-cent').value;
+            
+            const userDollars = parseInt(dollarInput) || 0;
+            const userCents = parseInt(centInput) || 0;
+            const userTotalCents = (userDollars * 10) + userCents;
+
+            if (userTotalCents === totalCents) {
+                // 答對了
+                score++;
+                showFeedback('success', '答對了！好棒！');
+                setTimeout(() => nextQuestion(), 1500);
+            } else {
+                handleWrongAnswer("答錯了！請再試一次。");
+            }
+        }
+
+        function handleWrongAnswer(msg) {
+            lives--;
+            renderHearts();
+            
+            if (!wrongQs.includes(currentQ)) {
+                wrongQs.push(currentQ);
+            }
+
+            if (lives <= 0) {
+                showFeedback('error', '沒有機會了！遊戲結束。');
+                setTimeout(() => endGame(), 2000);
+            } else {
+                showFeedback('error', msg);
+                setTimeout(() => {
+                    hideFeedback();
+                }, 2000);
+            }
+        }
+
+        function nextQuestion() {
+            if (currentQ >= 5) {
+                endGame();
+            } else {
+                currentQ++;
+                generateQuestion();
+            }
+        }
+
+        // 回饋動畫
+        function showFeedback(type, msg) {
+            isFeedbackShowing = true;
+            clearInterval(timerInterval);
+            const overlay = document.getElementById('feedback-overlay');
+            const box = document.getElementById('feedback-box');
+            const msgEl = document.getElementById('feedback-msg');
+            const iconSuccess = document.getElementById('feedback-icon-success');
+            const iconError = document.getElementById('feedback-icon-error');
+            const btnSubmit = document.getElementById('btn-submit-answer');
+
+            overlay.classList.remove('hidden');
+            msgEl.innerText = msg;
+            btnSubmit.disabled = true;
+            btnSubmit.classList.add('bg-gray-400');
+            btnSubmit.classList.remove('bg-green-500', 'hover:bg-green-600');
+
+            if (type === 'success') {
+                box.className = 'p-8 rounded-2xl shadow-2xl text-center transform animate-bounce bg-green-100 text-green-800';
+                iconSuccess.classList.remove('hidden');
+                iconError.classList.add('hidden');
+            } else {
+                box.className = 'p-8 rounded-2xl shadow-2xl text-center transform animate-bounce bg-red-100 text-red-800';
+                iconSuccess.classList.add('hidden');
+                iconError.classList.remove('hidden');
+            }
+        }
+
+        function hideFeedback() {
+            isFeedbackShowing = false;
+            document.getElementById('feedback-overlay').classList.add('hidden');
+            const btnSubmit = document.getElementById('btn-submit-answer');
+            btnSubmit.disabled = false;
+            btnSubmit.classList.remove('bg-gray-400');
+            btnSubmit.classList.add('bg-green-500', 'hover:bg-green-600');
+            startTimer(); // 恢復計時
+        }
+
+        // 結束遊戲與證書
+        function endGame() {
+            switchScreen('screen-certificate');
+            renderCertificate();
+            submitToGoogleSheet();
+        }
+
+        function renderCertificate() {
+            document.getElementById('cert-student-id').innerText = studentId;
+            document.getElementById('cert-level').innerText = level;
+            document.getElementById('cert-score').innerText = score;
+
+            const container = document.getElementById('cert-container');
+            const header = document.getElementById('cert-header');
+            const body = document.getElementById('cert-body');
+            const title = document.getElementById('cert-title');
+            const icon = document.getElementById('cert-icon').querySelector('i');
+            const msg = document.getElementById('cert-msg');
+
+            // 移除舊樣式
+            container.className = 'w-full max-w-2xl bg-white border-8 rounded-xl shadow-2xl overflow-hidden relative';
+            header.className = 'py-6 text-center text-white';
+            body.className = 'p-10 text-center';
+            icon.className = '';
+
+            if (score === 5) {
+                container.classList.add('border-yellow-400');
+                header.classList.add('bg-yellow-500');
+                body.classList.add('bg-yellow-50');
+                title.innerText = "金獎證書";
+                icon.classList.add('text-yellow-500');
+                msg.innerText = '"太棒了！你是貨幣計算大師！"';
+            } else if (score >= 3) {
+                container.classList.add('border-gray-400');
+                header.classList.add('bg-gray-500');
+                body.classList.add('bg-gray-100');
+                title.innerText = "銀獎證書";
+                icon.classList.add('text-gray-500');
+                msg.innerText = '"表現很好！距離滿分只差一點點！"';
+            } else {
+                container.classList.add('border-orange-400');
+                header.classList.add('bg-orange-500');
+                body.classList.add('bg-orange-50');
+                title.innerText = "銅獎證書";
+                icon.classList.add('text-orange-500');
+                msg.innerText = '"繼續努力，你一定能做得更好！"';
+            }
+        }
+
+        // 返回主選單
+        function returnToMenu() {
+            switchScreen('screen-menu');
+        }
+
+        // --- Google Sheet 整合邏輯 ---
+        async function submitToGoogleSheet() {
+            const sheetStatus = document.getElementById('sheet-status');
+            // 顯示載入中
+            sheetStatus.innerHTML = '<i data-lucide="refresh-ccw" class="animate-spin mr-2"></i> 正在傳送成績至老師的紀錄表...';
+            lucide.createIcons({ root: sheetStatus });
+            
+            const payload = {
+                studentId: studentId,
+                score: score,
+                level: level,
+                wrongQuestions: wrongQs.join(', ') || '無'
+            };
+
+            /* 【教師設定指南】
+                1. 在 Google Drive 新增一個 Google Apps Script。
+                2. 貼上以下程式碼：
+                function doPost(e) {
+                    var sheet = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/15ONtSFINqffiSulah8kJeZ3Cktxaeaqrq-yxrMlgs-Y/edit?gid=0#gid=0").getActiveSheet();
+                    var data = JSON.parse(e.postData.contents);
+                    sheet.appendRow([new Date(), data.studentId, data.level, data.score, data.wrongQuestions]);
+                    return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
+                }
+                3. 點擊「部署」->「新增部署作業」-> 選「網頁應用程式」，將存取權限設為「所有人」。
+                4. 複製產生的網頁應用程式 URL，取代下方的 WEB_APP_URL。
+            */
+            const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyPPZ_fEnfc55vmQX230CqV_ie8QAphxQv94hQCcclUD2q90dYLQSeL1WMIPoG-4b0o/exec"; 
+
+            try {
+                if (WEB_APP_URL !== "https://script.google.com/macros/s/AKfycbyPPZ_fEnfc55vmQX230CqV_ie8QAphxQv94hQCcclUD2q90dYLQSeL1WMIPoG-4b0o/exec") {
+                    await fetch(WEB_APP_URL, {
+                        method: 'POST',
+                        mode: 'no-cors', // 避免跨域問題
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    // 模擬網路延遲
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    console.log("模擬成功傳送資料:", payload);
+                }
+                sheetStatus.innerHTML = '<span class="text-green-600 font-bold">✓ 成績已記錄</span>';
+            } catch (error) {
+                console.error("傳送資料失敗:", error);
+                sheetStatus.innerHTML = '<span class="text-red-500 font-bold">✗ 傳送成績失敗，請檢查網路</span>';
+            }
+        }
+    </script>
+</body>
+</html>
