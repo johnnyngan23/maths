@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💰 小二數學：銀包裡有多少錢？ 👛</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700&family=Noto+Sans+HK:wght@700&display=swap');
+
+        body {
+            font-family: 'Nunito', 'Noto Sans HK', sans-serif;
+            background-color: #e0f7fa;
+            margin: 0;
+            padding: 20px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        #game-container {
+            background-color: #ffffff;
+            width: 95%;
+            max-width: 650px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            border: 6px solid #ffb6c1;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            color: #ff6b81;
+            font-size: 28px;
+            margin-top: 0;
+            text-shadow: 1px 1px 0px #ffeaa7;
+        }
+
+        /* 按鈕樣式 */
+        button {
+            background-color: #4cd137;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-family: inherit;
+            box-shadow: 0 5px 0 #44bd32;
+            transition: transform 0.1s, box-shadow 0.1s, background-color 0.2s;
+            margin: 10px;
+            font-weight: bold;
+        }
+
+        button:active {
+            transform: translateY(5px);
+            box-shadow: 0 0 0 #44bd32;
+        }
+
+        button:hover {
+            background-color: #44bd32;
+        }
+
+        button.mode-btn {
+            background-color: #00a8ff;
+            box-shadow: 0 5px 0 #0097e6;
+            display: block;
+            width: 85%;
+            margin: 15px auto;
+            font-size: 20px;
+        }
+
+        button.mode-btn:hover { background-color: #0097e6; }
+        button.mode-btn:active { box-shadow: 0 0 0 #0097e6; }
+
+        button.review-btn {
+            background-color: #fbc531;
+            box-shadow: 0 5px 0 #e1b12c;
+            color: #2f3640;
+        }
+        button.review-btn:hover { background-color: #e1b12c; }
+        button.review-btn:active { box-shadow: 0 0 0 #e1b12c; }
+
+        /* 遊戲資訊區 */
+        #info-bar {
+            display: flex;
+            justify-content: space-between;
+            font-size: 20px;
+            margin-bottom: 15px;
+            background-color: #fff9c4;
+            padding: 12px 20px;
+            border-radius: 15px;
+            border: 2px dashed #fbc531;
+            font-weight: bold;
+        }
+
+        .heart { color: #e84118; }
+        
+        #timer-text {
+            color: #c23616;
+            font-size: 24px;
+        }
+
+        /* Canvas 顯示區 */
+        canvas {
+            background-color: #f1f2f6;
+            border: 4px solid #ced6e0;
+            border-radius: 15px;
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            margin-bottom: 20px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* 輸入區 */
+        #input-area {
+            font-size: 24px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="number"] {
+            width: 70px;
+            height: 45px;
+            font-size: 24px;
+            text-align: center;
+            border: 3px solid #00a8ff;
+            border-radius: 10px;
+            outline: none;
+            font-family: inherit;
+            color: #2f3640;
+        }
+
+        input[type="number"]:focus {
+            border-color: #ff6b81;
+            box-shadow: 0 0 8px rgba(255,107,129,0.5);
+        }
+
+        /* 學生學號輸入區 */
+        .student-id-container {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f1f2f6;
+            border-radius: 10px;
+            border: 2px dashed #ced6e0;
+        }
+
+        #student-id-input {
+            padding: 10px;
+            font-size: 18px;
+            border: 2px solid #00a8ff;
+            border-radius: 8px;
+            width: 60%;
+            text-align: center;
+            font-family: inherit;
+        }
+
+        /* 證書樣式 */
+        #certificate-area {
+            display: none;
+            margin: 20px auto;
+            padding: 20px;
+            border-radius: 15px;
+            width: 90%;
+            border: 5px solid;
+            background-color: #fff;
+            position: relative;
+        }
+
+        .cert-gold { border-color: #f1c40f; background-image: linear-gradient(to bottom right, #fffdf0, #fff7c6); }
+        .cert-silver { border-color: #bdc3c7; background-image: linear-gradient(to bottom right, #ffffff, #f1f2f6); }
+        .cert-bronze { border-color: #cd7f32; background-image: linear-gradient(to bottom right, #fffafa, #fdf3ea); }
+
+        .cert-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+        .cert-name { font-size: 20px; color: #2f3640; margin-bottom: 10px; }
+        .cert-medal { font-size: 40px; margin: 10px 0; }
+
+        /* 畫面切換 */
+        .screen { display: none; }
+        .active { display: block; animation: fadeIn 0.3s ease-in-out; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #message {
+            font-size: 20px;
+            font-weight: bold;
+            height: 30px;
+            margin-bottom: 10px;
+        }
+
+        /* 解說區樣式 */
+        #review-details {
+            background-color: #f8efba;
+            border: 2px dashed #f39c12;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: left;
+            font-size: 18px;
+            line-height: 1.6;
+        }
+        
+        .correct-ans { color: #27ae60; font-weight: bold; }
+        .wrong-ans { color: #c0392b; text-decoration: line-through; margin-right: 10px;}
+        .breakdown { font-family: monospace; font-size: 16px; background: #fff; padding: 10px; border-radius: 5px; margin-top: 10px; }
+
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    
+    <!-- 主選單畫面 -->
+    <div id="menu-screen" class="screen active">
+        <h1>👛 數數銀包有多少錢？ 💰</h1>
+        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%23ffb6c1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4'/><path d='M4 6v12c0 1.1.9 2 2 2h14v-4'/><path d='M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z'/></svg>" alt="Wallet" style="margin-bottom:10px;">
+        
+        <div class="student-id-container">
+            <label for="student-id-input" style="font-size: 18px; font-weight: bold; display: block; margin-bottom: 10px;">請輸入你的學號：</label>
+            <input type="text" id="student-id-input" placeholder="例如：123456">
+        </div>
+
+        <p style="font-size: 18px; color: #576574;">請選擇遊戲難度：</p>
+        <button class="mode-btn" onclick="startGame(1)">1️⃣ 只有紙幣 (簡易)</button>
+        <button class="mode-btn" onclick="startGame(2)">2️⃣ 只有硬幣 (中等)</button>
+        <button class="mode-btn" onclick="startGame(3)">3️⃣ 紙幣 + 硬幣 (挑戰)</button>
+    </div>
+
+    <!-- 遊戲畫面 -->
+    <div id="game-screen" class="screen">
+        <div id="info-bar">
+            <span>⭐ 題目: <span id="q-count">1/5</span></span>
+            <span><span class="heart">❤️</span> <span id="lives">3</span></span>
+            <span>⏰ <span id="timer-text">30</span>秒</span>
+        </div>
+        
+        <h2 style="margin: 10px 0; color: #2f3640;">銀包裡有多少錢？</h2>
+        
+        <!-- Canvas 用來繪製貨幣 -->
+        <canvas id="wallet-canvas" width="600" height="300"></canvas>
+        
+        <div id="message"></div>
+
+        <div id="input-area">
+            <input type="number" id="ans-yuan" min="0" placeholder="0"> 元 
+            <input type="number" id="ans-jiao" min="0" max="9" placeholder="0"> 角
+        </div>
+        
+        <button onclick="checkAnswer()" style="width: 200px; font-size: 22px;">確定提交！</button>
+    </div>
+
+    <!-- 結果畫面 -->
+    <div id="result-screen" class="screen">
+        <h1 id="result-title">遊戲結束</h1>
+        <p style="font-size: 22px;">你的總分是：<strong id="final-score" style="color: #4cd137; font-size: 36px;"></strong> / 5 分</p>
+        <p id="result-msg" style="font-size: 20px; margin-bottom: 20px;"></p>
+        
+        <!-- 證書顯示區 -->
+        <div id="certificate-area">
+            <div class="cert-title" id="cert-title-text">結業證書</div>
+            <div class="cert-medal" id="cert-medal-icon">🥇</div>
+            <div class="cert-name">學號：<span id="cert-student-id"></span></div>
+            <div id="cert-desc" style="font-size: 16px; color: #555;"></div>
+        </div>
+
+        <div id="review-btn-container" style="display: none; margin-bottom: 20px;">
+            <button class="review-btn" onclick="startReview()">🔍 查看錯題解說</button>
+        </div>
+        
+        <button onclick="goToMenu()">返回主選單</button>
+    </div>
+
+    <!-- 錯題解說畫面 -->
+    <div id="review-screen" class="screen">
+        <h1>🔍 錯題解說</h1>
+        <h3 id="review-progress" style="color: #0097e6;">錯題 1 / 2</h3>
+        
+        <canvas id="review-canvas" width="600" height="300"></canvas>
+        
+        <div id="review-details">
+            <!-- 這裡會由 JS 動態填入解說 -->
+        </div>
+
+        <button onclick="nextReview()" id="next-review-btn">下一題解說</button>
+        <button onclick="goToMenu()" style="background-color: #7f8fa6; box-shadow: 0 5px 0 #718093;">結束解說</button>
+    </div>
+
+</div>
+
+<script>
+    // --- 資料定義 ---
+    // 單位全部為「角」(1元 = 10角)
+    const NOTES = [
+        { value: 10000, type: 'note', text: '$1000', color: '#e67e22', textCol: '#fff' }, // 橙色
+        { value: 5000,  type: 'note', text: '$500',  color: '#8d6e63', textCol: '#fff' }, // 啡色
+        { value: 1000,  type: 'note', text: '$100',  color: '#e84118', textCol: '#fff' }, // 紅色
+        { value: 500,   type: 'note', text: '$50',   color: '#4cd137', textCol: '#fff' }, // 綠色
+        { value: 200,   type: 'note', text: '$20',   color: '#00a8ff', textCol: '#fff' }, // 藍色
+        { value: 100,   type: 'note', text: '$10',   color: '#9c88ff', textCol: '#fff' }  // 紫色
+    ];
+
+    const COINS = [
+        { value: 100, type: 'coin', text: '$10', size: 28, style: 'bimetal' },
+        { value: 50,  type: 'coin', text: '$5',  size: 30, style: 'silver-thick' },
+        { value: 20,  type: 'coin', text: '$2',  size: 28, style: 'silver-scalloped' },
+        { value: 10,  type: 'coin', text: '$1',  size: 24, style: 'silver-thin' },
+        { value: 5,   type: 'coin', text: '5角', size: 26, style: 'gold' },
+        { value: 2,   type: 'coin', text: '2角', size: 24, style: 'gold-scalloped' },
+        { value: 1,   type: 'coin', text: '1角', size: 20, style: 'gold-thin' }
+    ];
+
+    // --- 遊戲狀態 ---
+    let currentMode = 1;
+    let score = 0;
+    let lives = 3;
+    let currentQ = 0;
+    const maxQ = 5;
+    let timer;
+    let timeLeft = 30;
+    
+    let currentItems = [];      // 畫面上目前的貨幣陣列
+    let currentTotalJiao = 0;   // 目前正確總額(角)
+    let wrongQuestions = [];    // 記錄答錯的題目 {items, correctYuan, correctJiao, userYuan, userJiao, qNum}
+    let currentReviewIndex = 0; // 解說進度
+    let studentId = "";         // 儲存學生學號
+
+    // ⚠️ 老師請注意：請將下方替換為您 Google Apps Script 發布後的 Web App 網址 
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzghTuVhNP1EzQamMtV06ew0Xg2PpNQj2glycFwBX7VF0clAhRBqSeH-pmaOLi8iXm3pQ/exec";
+
+    // --- Canvas 初始化 ---
+    const canvas = document.getElementById('wallet-canvas');
+    const ctx = canvas.getContext('2d');
+    const revCanvas = document.getElementById('review-canvas');
+    const revCtx = revCanvas.getContext('2d');
+
+    // 切換畫面
+    function showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+    }
+
+    // --- 遊戲邏輯 ---
+    function startGame(mode) {
+        let idInput = document.getElementById('student-id-input').value.trim();
+        if (idInput === "") {
+            alert("請先輸入你的學號喔！");
+            document.getElementById('student-id-input').focus();
+            return;
+        }
+        studentId = idInput;
+
+        currentMode = mode;
+        score = 0;
+        lives = 3;
+        currentQ = 0;
+        wrongQuestions = [];
+        updateInfoBar();
+        
+        // 重置證書顯示
+        document.getElementById('certificate-area').style.display = 'none';
+
+        showScreen('game-screen');
+        nextQuestion();
+    }
+
+    function nextQuestion() {
+        if (lives <= 0 || currentQ >= maxQ) {
+            endGame();
+            return;
+        }
+        
+        currentQ++;
+        document.getElementById('q-count').innerText = `${currentQ}/${maxQ}`;
+        
+        let msg = document.getElementById('message');
+        msg.innerText = "";
+        
+        document.getElementById('ans-yuan').value = "";
+        document.getElementById('ans-jiao').value = "";
+        document.getElementById('ans-yuan').focus();
+        
+        generateMoney();
+        drawWallet(ctx, currentItems);
+        startTimer();
+    }
+
+    function generateMoney() {
+        currentItems = [];
+        currentTotalJiao = 0;
+        
+        let moneyPool = [];
+        // 數量：紙幣模式少一點，硬幣/混合模式多一點
+        let itemCount = 0;
+
+        if (currentMode === 1) {
+            moneyPool = NOTES;
+            itemCount = Math.floor(Math.random() * 3) + 3; // 3~5 張
+        } else if (currentMode === 2) {
+            moneyPool = COINS;
+            itemCount = Math.floor(Math.random() * 4) + 4; // 4~7 個
+        } else {
+            moneyPool = [...NOTES, ...COINS];
+            itemCount = Math.floor(Math.random() * 4) + 4; // 4~7 個
+        }
+
+        for (let i = 0; i < itemCount; i++) {
+            let randomMoney = moneyPool[Math.floor(Math.random() * moneyPool.length)];
+            currentTotalJiao += randomMoney.value;
+            // 複製物件以供渲染時加入座標
+            currentItems.push({...randomMoney}); 
+        }
+    }
+
+    function startTimer() {
+        clearInterval(timer);
+        timeLeft = 30;
+        document.getElementById('timer-text').innerText = timeLeft;
+        document.getElementById('timer-text').style.color = "#c23616";
+        
+        timer = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer-text').innerText = timeLeft;
+            
+            if (timeLeft <= 10) {
+                document.getElementById('timer-text').style.color = "#e84118"; // 最後10秒變紅
+            }
+            
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                handleWrongAnswer("時間到！⏰", null, null);
+            }
+        }, 1000);
+    }
+
+    function checkAnswer() {
+        clearInterval(timer);
+        
+        let inputYuanStr = document.getElementById('ans-yuan').value;
+        let inputJiaoStr = document.getElementById('ans-jiao').value;
+        
+        // 空白視為0
+        let inputYuan = inputYuanStr === "" ? 0 : parseInt(inputYuanStr);
+        let inputJiao = inputJiaoStr === "" ? 0 : parseInt(inputJiaoStr);
+        
+        let inputTotalJiao = (inputYuan * 10) + inputJiao;
+
+        if (inputTotalJiao === currentTotalJiao) {
+            score++;
+            let msg = document.getElementById('message');
+            msg.style.color = "#4cd137";
+            msg.innerText = "答對了！🎉 加一分！";
+            setTimeout(nextQuestion, 1200);
+        } else {
+            handleWrongAnswer("答錯了！💦", inputYuan, inputJiao);
+        }
+    }
+
+    function handleWrongAnswer(msgText, userYuan, userJiao) {
+        lives--;
+        updateInfoBar();
+        
+        let correctYuan = Math.floor(currentTotalJiao / 10);
+        let correctJiao = currentTotalJiao % 10;
+
+        // 記錄錯題
+        wrongQuestions.push({
+            qNum: currentQ,
+            items: [...currentItems],
+            correctYuan: correctYuan,
+            correctJiao: correctJiao,
+            userYuan: userYuan !== null ? userYuan : '沒填寫',
+            userJiao: userJiao !== null ? userJiao : '沒填寫'
+        });
+        
+        let msg = document.getElementById('message');
+        msg.style.color = "#e84118";
+        msg.innerText = `${msgText} 正確答案是 ${correctYuan}元 ${correctJiao}角`;
+
+        setTimeout(() => {
+            if (lives > 0) {
+                nextQuestion();
+            } else {
+                endGame();
+            }
+        }, 2500);
+    }
+
+    function updateInfoBar() {
+        document.getElementById('lives').innerText = lives;
+    }
+
+    function endGame() {
+        clearInterval(timer);
+        showScreen('result-screen');
+        
+        document.getElementById('final-score').innerText = score;
+        let resultTitle = document.getElementById('result-title');
+        let resultMsg = document.getElementById('result-msg');
+        let reviewBtnContainer = document.getElementById('review-btn-container');
+
+        if (lives <= 0) {
+            resultTitle.innerText = "機會用完啦！💦";
+            resultTitle.style.color = "#e84118";
+            resultMsg.innerText = "不要灰心，多練習幾次就會變得很厲害！";
+        } else {
+            resultTitle.innerText = "過關！🎉";
+            resultTitle.style.color = "#4cd137";
+            if (score === 5) {
+                resultMsg.innerText = "太棒了！你是數錢小天才！🌟";
+            } else {
+                resultMsg.innerText = "做得好！下次挑戰滿分吧！👍";
+            }
+        }
+
+        // 顯示鼓勵證書
+        generateCertificate();
+
+        // 傳送資料到 Google Sheet
+        sendDataToGoogleSheet();
+
+        // 如果有錯題，顯示解說按鈕
+        if (wrongQuestions.length > 0) {
+            reviewBtnContainer.style.display = "block";
+        } else {
+            reviewBtnContainer.style.display = "none";
+        }
+    }
+
+    function generateCertificate() {
+        const certArea = document.getElementById('certificate-area');
+        const certTitle = document.getElementById('cert-title-text');
+        const certMedal = document.getElementById('cert-medal-icon');
+        const certStudent = document.getElementById('cert-student-id');
+        const certDesc = document.getElementById('cert-desc');
+        
+        certArea.style.display = 'block';
+        certArea.className = ''; // reset classes
+        certStudent.innerText = studentId;
+
+        if (score === 5) {
+            certArea.classList.add('cert-gold');
+            certTitle.innerText = "🌟 卓越金牌證書 🌟";
+            certTitle.style.color = "#d35400";
+            certMedal.innerText = "🏆";
+            certDesc.innerText = "恭喜你獲得滿分！你是真正的理財小天才！";
+        } else if (score >= 3) {
+            certArea.classList.add('cert-silver');
+            certTitle.innerText = "✨ 優秀銀牌證書 ✨";
+            certTitle.style.color = "#2c3e50";
+            certMedal.innerText = "🥈";
+            certDesc.innerText = "表現得很不錯喔！繼續保持，下次爭取滿分！";
+        } else {
+            certArea.classList.add('cert-bronze');
+            certTitle.innerText = "🌱 潛力銅牌證書 🌱";
+            certTitle.style.color = "#8e44ad";
+            certMedal.innerText = "🥉";
+            certDesc.innerText = "勇敢嘗試就是最棒的！再接再厲，你一定會進步！";
+        }
+    }
+
+    function sendDataToGoogleSheet() {
+        if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === "在此填入您的_Google_Apps_Script_Web_App_URL") {
+            console.log("未設定 Google Apps Script URL，跳過上傳。");
+            return;
+        }
+
+        // 整理答錯的題號 (例如: "1, 3")
+        let wrongQNums = wrongQuestions.map(q => q.qNum).join(', ');
+        if (wrongQNums === "") wrongQNums = "無 (全對)";
+
+        // 建立要傳送的資料格式
+        const formData = new URLSearchParams();
+        formData.append('studentId', studentId);
+        formData.append('score', score);
+        formData.append('wrongQuestions', wrongQNums);
+        
+        // 把數字模式轉換為文字方便老師查看
+        let modeText = currentMode === 1 ? "純紙幣" : (currentMode === 2 ? "純硬幣" : "混合");
+        formData.append('mode', modeText);
+
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', // 避免 CORS 錯誤
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData.toString()
+        }).then(() => {
+            console.log("資料已成功送出至 Google Sheets");
+        }).catch(error => {
+            console.error("上傳資料失敗：", error);
+        });
+    }
+
+    function goToMenu() {
+        showScreen('menu-screen');
+    }
+
+    // --- 錯題解說邏輯 ---
+    function startReview() {
+        currentReviewIndex = 0;
+        showScreen('review-screen');
+        renderReview();
+    }
+
+    function renderReview() {
+        const q = wrongQuestions[currentReviewIndex];
+        document.getElementById('review-progress').innerText = `錯題 ${currentReviewIndex + 1} / ${wrongQuestions.length}`;
+        
+        // 畫出錯題的硬幣
+        drawWallet(revCtx, q.items);
+
+        // 組合算式字串
+        let breakdownHTML = "";
+        let valuesStr = [];
+        let sortedItems = [...q.items].sort((a, b) => b.value - a.value); // 面額大的排前面
+        
+        sortedItems.forEach(item => {
+            if(item.value >= 10) {
+                valuesStr.push(`${item.value/10}元`);
+            } else {
+                valuesStr.push(`${item.value}角`);
+            }
+        });
+        
+        breakdownHTML = valuesStr.join(" + ") + ` = <strong>${q.correctYuan}元 ${q.correctJiao}角</strong>`;
+
+        let userYStr = q.userYuan === '沒填寫' ? '-' : q.userYuan;
+        let userJStr = q.userJiao === '沒填寫' ? '-' : q.userJiao;
+
+        document.getElementById('review-details').innerHTML = `
+            <div>你的答案：<span class="wrong-ans">${userYStr}元 ${userJStr}角</span></div>
+            <div>正確答案：<span class="correct-ans">${q.correctYuan}元 ${q.correctJiao}角</span></div>
+            <div class="breakdown">
+                <strong>💡 計算方法：</strong><br>
+                ${breakdownHTML}
+            </div>
+        `;
+
+        // 處理下一題按鈕
+        let nextBtn = document.getElementById('next-review-btn');
+        if (currentReviewIndex < wrongQuestions.length - 1) {
+            nextBtn.style.display = "inline-block";
+        } else {
+            nextBtn.style.display = "none";
+        }
+    }
+
+    function nextReview() {
+        currentReviewIndex++;
+        renderReview();
+    }
+
+
+    // --- Canvas 繪圖邏輯 ---
+    function drawWallet(context, items) {
+        const cw = context.canvas.width;
+        const ch = context.canvas.height;
+        context.clearRect(0, 0, cw, ch);
+
+        // 簡單的碰撞/重疊分散演算法
+        let placed = [];
+        
+        items.forEach(item => {
+            let width = item.type === 'note' ? 130 : item.size * 2 + 10;
+            let height = item.type === 'note' ? 65 : item.size * 2 + 10;
+            
+            let x, y;
+            let attempts = 0;
+            let valid = false;
+
+            // 嘗試尋找不嚴重重疊的位置
+            while (!valid && attempts < 50) {
+                x = Math.random() * (cw - width) + width/2;
+                y = Math.random() * (ch - height) + height/2;
+                valid = true;
+                
+                for (let p of placed) {
+                    let dx = x - p.x;
+                    let dy = y - p.y;
+                    let dist = Math.sqrt(dx*dx + dy*dy);
+                    let minDist = (width + p.w)/2 * 0.7; // 容許30%重疊
+                    if (dist < minDist) {
+                        valid = false;
+                        break;
+                    }
+                }
+                attempts++;
+            }
+            
+            placed.push({x: x, y: y, w: width});
+
+            // 隨機旋轉一點點增加真實感
+            context.save();
+            context.translate(x, y);
+            let angle = (Math.random() - 0.5) * 0.3; // -0.15 到 0.15 rad
+            context.rotate(angle);
+
+            if (item.type === 'note') {
+                drawNote(context, 0, 0, item);
+            } else {
+                drawCoin(context, 0, 0, item);
+            }
+            
+            context.restore();
+        });
+    }
+
+    function drawNote(ctx, x, y, note) {
+        const w = 120;
+        const h = 60;
+        
+        ctx.beginPath();
+        ctx.rect(x - w/2, y - h/2, w, h);
+        ctx.fillStyle = note.color;
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#555';
+        ctx.stroke();
+
+        // 內框線 (紙幣特徵)
+        ctx.beginPath();
+        ctx.setLineDash([4, 2]);
+        ctx.rect(x - w/2 + 5, y - h/2 + 5, w - 10, h - 10);
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.stroke();
+        ctx.setLineDash([]); // 重置
+
+        // 文字
+        ctx.fillStyle = note.textCol;
+        ctx.font = 'bold 22px "Nunito"';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // 加入文字陰影增加立體感
+        ctx.shadowColor = "rgba(0,0,0,0.5)";
+        ctx.shadowBlur = 2;
+        ctx.shadowOffsetX = 1;
+        ctx.shadowOffsetY = 1;
+        
+        ctx.fillText(note.text, x, y);
+        
+        // 重置陰影
+        ctx.shadowColor = "transparent";
+    }
+
+    function drawCoin(ctx, x, y, coin) {
+        const r = coin.size;
+        
+        ctx.shadowColor = "rgba(0,0,0,0.3)";
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+
+        if (coin.style === 'bimetal') {
+            // $10 雙色硬幣
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI*2);
+            ctx.fillStyle = '#dcdde1'; // 外銀
+            ctx.fill();
+            ctx.strokeStyle = '#718093';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(x, y, r*0.6, 0, Math.PI*2);
+            ctx.fillStyle = '#fbc531'; // 內金
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#2f3640';
+
+        } else if (coin.style.includes('scalloped')) {
+            // 波浪邊硬幣 ($2, 2角)
+            drawScallopedShape(ctx, x, y, r, 10);
+            ctx.fillStyle = coin.style.includes('gold') ? '#cc8e35' : '#dcdde1';
+            ctx.fill();
+            ctx.strokeStyle = coin.style.includes('gold') ? '#a46d20' : '#718093';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.fillStyle = coin.style.includes('gold') ? '#fff' : '#2f3640';
+
+        } else {
+            // 普通圓形硬幣 ($5, $1, 5角, 1角)
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI*2);
+            ctx.fillStyle = coin.style.includes('gold') ? '#cc8e35' : '#dcdde1';
+            ctx.fill();
+            ctx.strokeStyle = coin.style.includes('gold') ? '#a46d20' : '#718093';
+            ctx.lineWidth = coin.style.includes('thick') ? 4 : 2;
+            ctx.stroke();
+
+            ctx.fillStyle = coin.style.includes('gold') ? '#fff' : '#2f3640';
+        }
+
+        ctx.shadowColor = "transparent"; // 關閉陰影給文字
+
+        // 畫文字
+        ctx.font = 'bold 16px "Noto Sans HK", sans-serif';
+        if (coin.text === '1角') ctx.font = 'bold 13px "Noto Sans HK"'; // 1角較小
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(coin.text, x, y);
+    }
+
+    // 繪製波浪形緣 (Scalloped)
+    function drawScallopedShape(ctx, cx, cy, radius, points) {
+        ctx.beginPath();
+        const step = (Math.PI * 2) / points;
+        for (let i = 0; i <= points; i++) {
+            let angle = i * step;
+            let nextAngle = (i + 1) * step;
+            // 控制點稍微往外推形成花瓣感
+            let cpAngle = angle + step / 2;
+            let cpRadius = radius * 1.15;
+            
+            if (i === 0) {
+                ctx.moveTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+            } else {
+                ctx.quadraticCurveTo(
+                    cx + Math.cos(angle - step/2) * cpRadius, cy + Math.sin(angle - step/2) * cpRadius,
+                    cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius
+                );
+            }
+        }
+        ctx.closePath();
+    }
+
+</script>
+
+</body>
+</html>
