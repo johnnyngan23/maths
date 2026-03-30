@@ -302,15 +302,17 @@
 </div>
 
 <script>
+    // ⚠️ 老師請注意：請將下方替換為您 Google Apps Script 發布後的 Web App 網址 
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzb0PwXxtTnyJIUqO_rgeWeYDOZn4-TrXGh8MnqqN7jR1aW39q1gp2f_1uRal4XN10SoA/exec";
+
     // --- 資料定義 ---
-    // 單位全部為「角」(1元 = 10角)
     const NOTES = [
-        { value: 10000, type: 'note', text: '$1000', color: '#e67e22', textCol: '#fff' }, // 橙色
-        { value: 5000,  type: 'note', text: '$500',  color: '#8d6e63', textCol: '#fff' }, // 啡色
-        { value: 1000,  type: 'note', text: '$100',  color: '#e84118', textCol: '#fff' }, // 紅色
-        { value: 500,   type: 'note', text: '$50',   color: '#4cd137', textCol: '#fff' }, // 綠色
-        { value: 200,   type: 'note', text: '$20',   color: '#00a8ff', textCol: '#fff' }, // 藍色
-        { value: 100,   type: 'note', text: '$10',   color: '#9c88ff', textCol: '#fff' }  // 紫色
+        { value: 10000, type: 'note', text: '$1000', color: '#e67e22', textCol: '#fff' },
+        { value: 5000,  type: 'note', text: '$500',  color: '#8d6e63', textCol: '#fff' },
+        { value: 1000,  type: 'note', text: '$100',  color: '#e84118', textCol: '#fff' },
+        { value: 500,   type: 'note', text: '$50',   color: '#4cd137', textCol: '#fff' },
+        { value: 200,   type: 'note', text: '$20',   color: '#00a8ff', textCol: '#fff' },
+        { value: 100,   type: 'note', text: '$10',   color: '#9c88ff', textCol: '#fff' } 
     ];
 
     const COINS = [
@@ -332,14 +334,11 @@
     let timer;
     let timeLeft = 30;
     
-    let currentItems = [];      // 畫面上目前的貨幣陣列
-    let currentTotalJiao = 0;   // 目前正確總額(角)
-    let wrongQuestions = [];    // 記錄答錯的題目 {items, correctYuan, correctJiao, userYuan, userJiao, qNum}
-    let currentReviewIndex = 0; // 解說進度
-    let studentId = "";         // 儲存學生學號
-
-    // ⚠️ 老師請注意：請將下方替換為您 Google Apps Script 發布後的 Web App 網址 
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyBVFa77MFA_Kz52cwbTPUDicqUXuxyTdz5xgDnn06lZbGPl09Imo1TWNZlzWJckCeYwA/exec";
+    let currentItems = [];      
+    let currentTotalJiao = 0;   
+    let wrongQuestions = [];    
+    let currentReviewIndex = 0; 
+    let studentId = "";         
 
     // --- Canvas 初始化 ---
     const canvas = document.getElementById('wallet-canvas');
@@ -370,7 +369,6 @@
         wrongQuestions = [];
         updateInfoBar();
         
-        // 重置證書顯示
         document.getElementById('certificate-area').style.display = 'none';
 
         showScreen('game-screen');
@@ -403,24 +401,22 @@
         currentTotalJiao = 0;
         
         let moneyPool = [];
-        // 數量：紙幣模式少一點，硬幣/混合模式多一點
         let itemCount = 0;
 
         if (currentMode === 1) {
             moneyPool = NOTES;
-            itemCount = Math.floor(Math.random() * 3) + 3; // 3~5 張
+            itemCount = Math.floor(Math.random() * 3) + 3;
         } else if (currentMode === 2) {
             moneyPool = COINS;
-            itemCount = Math.floor(Math.random() * 4) + 4; // 4~7 個
+            itemCount = Math.floor(Math.random() * 4) + 4;
         } else {
             moneyPool = [...NOTES, ...COINS];
-            itemCount = Math.floor(Math.random() * 4) + 4; // 4~7 個
+            itemCount = Math.floor(Math.random() * 4) + 4;
         }
 
         for (let i = 0; i < itemCount; i++) {
             let randomMoney = moneyPool[Math.floor(Math.random() * moneyPool.length)];
             currentTotalJiao += randomMoney.value;
-            // 複製物件以供渲染時加入座標
             currentItems.push({...randomMoney}); 
         }
     }
@@ -436,7 +432,7 @@
             document.getElementById('timer-text').innerText = timeLeft;
             
             if (timeLeft <= 10) {
-                document.getElementById('timer-text').style.color = "#e84118"; // 最後10秒變紅
+                document.getElementById('timer-text').style.color = "#e84118";
             }
             
             if (timeLeft <= 0) {
@@ -452,7 +448,6 @@
         let inputYuanStr = document.getElementById('ans-yuan').value;
         let inputJiaoStr = document.getElementById('ans-jiao').value;
         
-        // 空白視為0
         let inputYuan = inputYuanStr === "" ? 0 : parseInt(inputYuanStr);
         let inputJiao = inputJiaoStr === "" ? 0 : parseInt(inputJiaoStr);
         
@@ -476,7 +471,6 @@
         let correctYuan = Math.floor(currentTotalJiao / 10);
         let correctJiao = currentTotalJiao % 10;
 
-        // 記錄錯題
         wrongQuestions.push({
             qNum: currentQ,
             items: [...currentItems],
@@ -526,13 +520,9 @@
             }
         }
 
-        // 顯示鼓勵證書
         generateCertificate();
-
-        // 傳送資料到 Google Sheet
         sendDataToGoogleSheet();
 
-        // 如果有錯題，顯示解說按鈕
         if (wrongQuestions.length > 0) {
             reviewBtnContainer.style.display = "block";
         } else {
@@ -548,7 +538,7 @@
         const certDesc = document.getElementById('cert-desc');
         
         certArea.style.display = 'block';
-        certArea.className = ''; // reset classes
+        certArea.className = ''; 
         certStudent.innerText = studentId;
 
         if (score === 5) {
@@ -572,37 +562,32 @@
         }
     }
 
+    // ⭐ 傳輸資料到 Google Sheet (使用 GET 方法，最不易被阻擋)
     function sendDataToGoogleSheet() {
-        if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === "在此填入您的_Google_Apps_Script_Web_App_URL") {
+        if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbzb0PwXxtTnyJIUqO_rgeWeYDOZn4-TrXGh8MnqqN7jR1aW39q1gp2f_1uRal4XN10SoA/exec") {
             console.log("未設定 Google Apps Script URL，跳過上傳。");
             return;
         }
 
-        // 整理答錯的題號 (例如: "1, 3")
         let wrongQNums = wrongQuestions.map(q => q.qNum).join(', ');
         if (wrongQNums === "") wrongQNums = "無 (全對)";
-
-        // 建立要傳送的資料格式
-        const formData = new URLSearchParams();
-        formData.append('studentId', studentId);
-        formData.append('score', score);
-        formData.append('wrongQuestions', wrongQNums);
-        
-        // 把數字模式轉換為文字方便老師查看
         let modeText = currentMode === 1 ? "純紙幣" : (currentMode === 2 ? "純硬幣" : "混合");
-        formData.append('mode', modeText);
 
-        fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors', // 避免 CORS 錯誤
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: formData.toString()
+        // 將參數直接組合在網址後方 (GET Request)
+        let finalUrl = GOOGLE_SCRIPT_URL + 
+            "?studentId=" + encodeURIComponent(studentId) + 
+            "&score=" + encodeURIComponent(score) + 
+            "&mode=" + encodeURIComponent(modeText) + 
+            "&wrongQuestions=" + encodeURIComponent(wrongQNums);
+
+        // 使用 fetch 送出，設定 no-cors 確保不被瀏覽器 CORS 規則擋下
+        fetch(finalUrl, {
+            method: 'GET',
+            mode: 'no-cors'
         }).then(() => {
-            console.log("資料已成功送出至 Google Sheets");
-        }).catch(error => {
-            console.error("上傳資料失敗：", error);
+            console.log("成績已嘗試送出！");
+        }).catch(err => {
+            console.error("傳送發生錯誤：", err);
         });
     }
 
@@ -621,13 +606,11 @@
         const q = wrongQuestions[currentReviewIndex];
         document.getElementById('review-progress').innerText = `錯題 ${currentReviewIndex + 1} / ${wrongQuestions.length}`;
         
-        // 畫出錯題的硬幣
         drawWallet(revCtx, q.items);
 
-        // 組合算式字串
         let breakdownHTML = "";
         let valuesStr = [];
-        let sortedItems = [...q.items].sort((a, b) => b.value - a.value); // 面額大的排前面
+        let sortedItems = [...q.items].sort((a, b) => b.value - a.value); 
         
         sortedItems.forEach(item => {
             if(item.value >= 10) {
@@ -651,7 +634,6 @@
             </div>
         `;
 
-        // 處理下一題按鈕
         let nextBtn = document.getElementById('next-review-btn');
         if (currentReviewIndex < wrongQuestions.length - 1) {
             nextBtn.style.display = "inline-block";
@@ -672,7 +654,6 @@
         const ch = context.canvas.height;
         context.clearRect(0, 0, cw, ch);
 
-        // 簡單的碰撞/重疊分散演算法
         let placed = [];
         
         items.forEach(item => {
@@ -683,7 +664,6 @@
             let attempts = 0;
             let valid = false;
 
-            // 嘗試尋找不嚴重重疊的位置
             while (!valid && attempts < 50) {
                 x = Math.random() * (cw - width) + width/2;
                 y = Math.random() * (ch - height) + height/2;
@@ -693,7 +673,7 @@
                     let dx = x - p.x;
                     let dy = y - p.y;
                     let dist = Math.sqrt(dx*dx + dy*dy);
-                    let minDist = (width + p.w)/2 * 0.7; // 容許30%重疊
+                    let minDist = (width + p.w)/2 * 0.7; 
                     if (dist < minDist) {
                         valid = false;
                         break;
@@ -704,10 +684,9 @@
             
             placed.push({x: x, y: y, w: width});
 
-            // 隨機旋轉一點點增加真實感
             context.save();
             context.translate(x, y);
-            let angle = (Math.random() - 0.5) * 0.3; // -0.15 到 0.15 rad
+            let angle = (Math.random() - 0.5) * 0.3; 
             context.rotate(angle);
 
             if (item.type === 'note') {
@@ -732,29 +711,24 @@
         ctx.strokeStyle = '#555';
         ctx.stroke();
 
-        // 內框線 (紙幣特徵)
         ctx.beginPath();
         ctx.setLineDash([4, 2]);
         ctx.rect(x - w/2 + 5, y - h/2 + 5, w - 10, h - 10);
         ctx.strokeStyle = 'rgba(255,255,255,0.7)';
         ctx.stroke();
-        ctx.setLineDash([]); // 重置
+        ctx.setLineDash([]); 
 
-        // 文字
         ctx.fillStyle = note.textCol;
         ctx.font = 'bold 22px "Nunito"';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         
-        // 加入文字陰影增加立體感
         ctx.shadowColor = "rgba(0,0,0,0.5)";
         ctx.shadowBlur = 2;
         ctx.shadowOffsetX = 1;
         ctx.shadowOffsetY = 1;
         
         ctx.fillText(note.text, x, y);
-        
-        // 重置陰影
         ctx.shadowColor = "transparent";
     }
 
@@ -767,10 +741,9 @@
         ctx.shadowOffsetY = 2;
 
         if (coin.style === 'bimetal') {
-            // $10 雙色硬幣
             ctx.beginPath();
             ctx.arc(x, y, r, 0, Math.PI*2);
-            ctx.fillStyle = '#dcdde1'; // 外銀
+            ctx.fillStyle = '#dcdde1'; 
             ctx.fill();
             ctx.strokeStyle = '#718093';
             ctx.lineWidth = 2;
@@ -778,14 +751,13 @@
 
             ctx.beginPath();
             ctx.arc(x, y, r*0.6, 0, Math.PI*2);
-            ctx.fillStyle = '#fbc531'; // 內金
+            ctx.fillStyle = '#fbc531'; 
             ctx.fill();
             ctx.stroke();
 
             ctx.fillStyle = '#2f3640';
 
         } else if (coin.style.includes('scalloped')) {
-            // 波浪邊硬幣 ($2, 2角)
             drawScallopedShape(ctx, x, y, r, 10);
             ctx.fillStyle = coin.style.includes('gold') ? '#cc8e35' : '#dcdde1';
             ctx.fill();
@@ -796,7 +768,6 @@
             ctx.fillStyle = coin.style.includes('gold') ? '#fff' : '#2f3640';
 
         } else {
-            // 普通圓形硬幣 ($5, $1, 5角, 1角)
             ctx.beginPath();
             ctx.arc(x, y, r, 0, Math.PI*2);
             ctx.fillStyle = coin.style.includes('gold') ? '#cc8e35' : '#dcdde1';
@@ -808,24 +779,21 @@
             ctx.fillStyle = coin.style.includes('gold') ? '#fff' : '#2f3640';
         }
 
-        ctx.shadowColor = "transparent"; // 關閉陰影給文字
+        ctx.shadowColor = "transparent"; 
 
-        // 畫文字
         ctx.font = 'bold 16px "Noto Sans HK", sans-serif';
-        if (coin.text === '1角') ctx.font = 'bold 13px "Noto Sans HK"'; // 1角較小
+        if (coin.text === '1角') ctx.font = 'bold 13px "Noto Sans HK"'; 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(coin.text, x, y);
     }
 
-    // 繪製波浪形緣 (Scalloped)
     function drawScallopedShape(ctx, cx, cy, radius, points) {
         ctx.beginPath();
         const step = (Math.PI * 2) / points;
         for (let i = 0; i <= points; i++) {
             let angle = i * step;
             let nextAngle = (i + 1) * step;
-            // 控制點稍微往外推形成花瓣感
             let cpAngle = angle + step / 2;
             let cpRadius = radius * 1.15;
             
